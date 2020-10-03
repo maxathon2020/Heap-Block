@@ -1,12 +1,12 @@
 import json
 from typing import Tuple, List
 
+import more_itertools
 from rsa import PrivateKey
 
 from abstract_participant import AbstractParticipant
 from blockchain import Blockchain
-from rsatools import RSATools
-from transaction import Transaction
+from cryptingtools import CryptingTools
 
 
 class IndividualPerson(AbstractParticipant):
@@ -33,8 +33,8 @@ class IndividualPerson(AbstractParticipant):
         :param data:
         :return:  (transaction_id, private_key)
         """
-        public_key_for_medical_data, private_key_for_data = RSATools.generate_public_private_key()
-        crypted_medical_data = RSATools.crypt_data(data, public_key_for_medical_data)
+        public_key_for_medical_data, private_key_for_data = CryptingTools.generate_public_private_key()
+        crypted_medical_data = CryptingTools.crypt_data(data, public_key_for_medical_data)
         medical_data_transaction = blockchain.add_transaction(crypted_medical_data, participant_a, participant_b)
         medical_data_transaction_id = medical_data_transaction.id
 
@@ -55,7 +55,7 @@ class IndividualPerson(AbstractParticipant):
 
         acl_data_json = json.dumps({
             'key_name': key_name,
-            'private_key': private_key_for_medical_data,
+            'private_key': private_key_for_medical_data.save_pkcs1().decode('utf8'),
             'medical_data_transaction_id': medical_data_transaction_id,
         })
 
@@ -67,44 +67,54 @@ class IndividualPerson(AbstractParticipant):
         )
 
         self.add_key_to_keychain(key_name, [transaction_id])
+        return transaction_id
 
-    def add_medical_transaction(self, blockchain: Blockchain, third_party: AbstractParticipant, medical_data: str):
+    def add_medical_transaction(self, blockchain: Blockchain, third_party: AbstractParticipant, medical_data: str) \
+            -> Tuple[str, str]:
         """
 
         :param blockchain:
         :param third_party: the doctor/pharmacist/hospital
         :param medical_data: JSON string. The data to store in the blockchain
         :return:
+        transaction_id for medical_data
+        transaction_id for keychain
         """
 
         medical_data_transaction_id, private_key_for_medical_data = \
             self.__add_abstract_transaction_crypted_data(blockchain, self, third_party, medical_data)
 
         # We straight forward add a element to the keychain to decrypt the data just added to the block chain
-        self.__add_private_key_to_blockchain(blockchain, medical_data_transaction_id, private_key_for_medical_data)
+        keychain_transaction_id = self.__add_private_key_to_blockchain(blockchain,
+                                                                       medical_data_transaction_id,
+                                                                       private_key_for_medical_data
+                                                                       )
+        return medical_data_transaction_id, keychain_transaction_id
 
     def share_medical_data_via_private_keys(self,
                                             blockchain: Blockchain,
                                             key_names: List[str],
                                             third_party_to_share_data_with: AbstractParticipant) \
-            -> Transaction:
+            -> str:
         # fetch transactions containing the private key we want to shared
         transaction_ids_containing_privates_keys = [self.keychain[a_key_name] for a_key_name in key_names]
+        transaction_ids_flattened = more_itertools.flatten(transaction_ids_containing_privates_keys)
         # remove duplicates
-        transaction_ids_containing_privates_keys = list(set(transaction_ids_containing_privates_keys))
+        transaction_ids_containing_privates_keys = list(set(transaction_ids_flattened))
 
         # fetch the private keys we want to shared
         crypted_medical_data_private_keys = blockchain.fetch_transaction_ids(transaction_ids_containing_privates_keys)
 
         uncrypted_medical_data_private_keys = {
             crypted_data['medical_data_transaction_id']:
-                RSATools.uncrypt_data(
-                    crypted_data['private_key'], self.__get_private_key()
+                CryptingTools.uncrypt_data(
+                    crypted_data, self._get_private_key()
                 )
-            for (transaction_id, crypted_data) in crypted_medical_data_private_keys.items()
+            for transaction_id, crypted_data in crypted_medical_data_private_keys.items()
         }
 
         data_to_share_uncrypted = json.dumps(uncrypted_medical_data_private_keys)
-        data_to_share_crypted = RSATools.crypt_data(data_to_share_uncrypted,
-                                                    third_party_to_share_data_with.get_public_key())
-        return blockchain.add_transaction(data_to_share_crypted, self, third_party_to_share_data_with)
+        data_to_share_crypted = CryptingTools.crypt_data(data_to_share_uncrypted,
+                                                         third_party_to_share_data_with.get_public_key())
+        created_transaction = blockchain.add_transaction(data_to_share_crypted, self, third_party_to_share_data_with)
+        return created_transaction.id

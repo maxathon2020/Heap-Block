@@ -51,11 +51,11 @@ class Blockchain(object):
         return self.chain[-1]
 
     # Add a transaction with relevant info to the 'blockpool' - list of pending tx's.
-    def add_transaction(self, data: Union[str, bytes], participant_a: AbstractParticipant,
+    def add_transaction(self, data, participant_a: AbstractParticipant,
                         participant_b: AbstractParticipant) -> Transaction:
         transaction = Transaction(data, participant_a, participant_b)
         self.pending_transactions.append(transaction)
-        return self.last_block['index'] + 1
+        return transaction
 
     def fetch_transaction_ids(self, transaction_ids: List[str]) -> dict:
         """
@@ -63,7 +63,13 @@ class Blockchain(object):
         :param transaction_ids:
         :return: {transacton_id: content}
         """
-        pass
+        found_transactions= {}
+        for block in self.chain:
+            for a_transaction in block['transactions']:
+                if a_transaction.id in transaction_ids:
+                    found_transactions.update({a_transaction.id: a_transaction.data})
+
+        return found_transactions
 
     def hash(self, block):
         string_object = json.dumps(block, sort_keys=True)
