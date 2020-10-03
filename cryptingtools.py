@@ -1,5 +1,3 @@
-import ast
-import json
 import os
 from typing import Tuple
 from Crypto.Cipher import AES
@@ -24,7 +22,6 @@ class CryptingTools:
         crypted_aes_key = rsa.encrypt(random_aes_key, public_key)
         crypted_aes_iv = rsa.encrypt(random_aes_iv, public_key)
 
-        print(crypted_aes_key, data)
         return {
             'data': crypted_data,
             'aes_key': crypted_aes_key,
@@ -41,4 +38,4 @@ class CryptingTools:
         aes_iv_uncrypted = rsa.decrypt(aes_iv_crypted, private_key)
         cipher = AES.new(aes_key_uncrypted, AES.MODE_EAX, aes_iv_uncrypted)
 
-        return cipher.decrypt(data_crypted.decode('utf8'))
+        return cipher.decrypt(data_crypted)

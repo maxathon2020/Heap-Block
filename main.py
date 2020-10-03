@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     drug_1_data_transaction_id, drug_1_acl_transaction_id = me.add_medical_transaction(
         blockchain,
-        nurse_1,
+        me,
         'Louis felt dizzy. I prescribed XXXX drug.'
     )
 

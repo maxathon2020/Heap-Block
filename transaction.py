@@ -18,7 +18,7 @@ class Transaction:
     def to_dict(self) -> dict:
         return {
             'id': self.id,
-            'data': self.data,
+            'data': str(self.data),
             'participant_a': self.participant_a.get_name(),
             'participant_b': self.participant_b.get_name(),
         }

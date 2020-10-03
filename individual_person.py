@@ -42,7 +42,8 @@ class IndividualPerson(AbstractParticipant):
 
     def __add_private_key_to_blockchain(self, blockchain: Blockchain,
                                         medical_data_transaction_id: str,
-                                        private_key_for_medical_data: PrivateKey):
+                                        private_key_for_medical_data: PrivateKey,
+                                        third_party=None):
         """
         create a new acl entry via acl_data
         :param blockchain: the wordlwide blockchain
@@ -51,6 +52,7 @@ class IndividualPerson(AbstractParticipant):
          The private_key decrypt the data in the transaction with the id transaction_id
         :return:
         """
+        third_party = third_party or self
         key_name = f'atomic ACL for {medical_data_transaction_id}'
 
         acl_data_json = json.dumps({
@@ -59,12 +61,9 @@ class IndividualPerson(AbstractParticipant):
             'medical_data_transaction_id': medical_data_transaction_id,
         })
 
-        transaction_id, private_key_for_acl = self.__add_abstract_transaction_crypted_data(
-            blockchain,
-            self,
-            self,
-            acl_data_json
-        )
+        crypted_medical_data = CryptingTools.crypt_data(acl_data_json, self.get_public_key())
+        transaction = blockchain.add_transaction(crypted_medical_data, self, third_party)
+        transaction_id = transaction.id
 
         self.add_key_to_keychain(key_name, [transaction_id])
         return transaction_id
@@ -87,7 +86,7 @@ class IndividualPerson(AbstractParticipant):
         # We straight forward add a element to the keychain to decrypt the data just added to the block chain
         keychain_transaction_id = self.__add_private_key_to_blockchain(blockchain,
                                                                        medical_data_transaction_id,
-                                                                       private_key_for_medical_data
+                                                                       private_key_for_medical_data,
                                                                        )
         return medical_data_transaction_id, keychain_transaction_id
 
@@ -106,9 +105,11 @@ class IndividualPerson(AbstractParticipant):
         crypted_medical_data_private_keys = blockchain.fetch_transaction_ids(transaction_ids_containing_privates_keys)
 
         uncrypted_medical_data_private_keys = {
-            crypted_data['medical_data_transaction_id']:
-                CryptingTools.uncrypt_data(
-                    crypted_data, self._get_private_key()
+            transaction_id:
+                json.loads(
+                    CryptingTools.uncrypt_data(
+                        crypted_data, self._get_private_key()
+                    )
                 )
             for transaction_id, crypted_data in crypted_medical_data_private_keys.items()
         }
