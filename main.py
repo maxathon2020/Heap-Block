@@ -4,20 +4,27 @@ import individual_person
 if __name__ == '__main__':
     blockchain = Blockchain()
 
-    patient_1 = individual_person.IndividualPerson()
-    doctor_1 = individual_person.IndividualPerson()
-    data1 = 'Prescription: Medicament 1 given to patient 1, because of disease 1'
-    t1 = blockchain.add_transaction(participant_a=patient_1,
-                                    participant_b=doctor_1,
-                                    data=data1)
-    blockchain.new_block(12345)
+    me = individual_person.IndividualPerson('Patient Louis')
+    nurse_1 = individual_person.IndividualPerson('Nurse GELINEAU')
+    doctor_1 = individual_person.IndividualPerson('Dr. VANSTEENKISTE')
+    pharmacy_1 = individual_person.IndividualPerson('Pharmacy next door')
 
-    patient_2 = individual_person.IndividualPerson()
-    doctor_2 = individual_person.IndividualPerson()
-    data2 = 'Prescription: Medicament 2 given to patient 2, because of disease 2'
-    t2 = blockchain.add_transaction(participant_a=patient_2,
-                                    participant_b=doctor_2,
-                                    data=data2)
-    blockchain.new_block(123445)
+    drug_1_data_transaction_id, drug_1_acl_transaction_id = me.add_medical_transaction(
+        blockchain,
+        me,
+        'Louis felt dizzy. I prescribed XXXX drug.'
+    )
 
-    print(blockchain.chain)
+    # me.add_medical_transaction(
+    #     blockchain,
+    #     doctor_1,
+    #     'Louis broke one of his finger. He sould stop working for 3 days.'
+    # )
+
+    blockchain.new_block(1)
+
+    acl_name_pharmacy = 'prescripions'
+    me.add_key_to_keychain(acl_name_pharmacy, [drug_1_acl_transaction_id])
+    me.share_medical_data_via_private_keys(blockchain, [acl_name_pharmacy], pharmacy_1)
+
+    print(blockchain)
