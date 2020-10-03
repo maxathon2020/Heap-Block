@@ -10,7 +10,8 @@ from transaction import Transaction
 
 
 class IndividualPerson(AbstractParticipant):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.keychain = {}
         #  if lost, keychain can be re-generated from the blockchain using self private_key
 

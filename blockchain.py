@@ -19,6 +19,14 @@ class Blockchain(object):
         # Create a new block listing key/value pairs of block information in a JSON object.
         # Reset the list of pending transactions & append the newest block to the chain.
 
+    def __str__(self) -> str:
+        return json.dumps({
+            'chain': [{
+                'index': chain_element['index'],
+                'content': [a_transaction.to_dict() for a_transaction in chain_element['transactions']]
+            } for chain_element in self.chain]
+        })
+
     def new_block(self, proof, previous_hash=None):
         try:
             new_hash = self.hash(self.chain[-1]['transactions'][0].data)
